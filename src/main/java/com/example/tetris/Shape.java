@@ -15,6 +15,14 @@ public final class Shape {
         setShape(Tetromino.NO_SHAPE);
     }
 
+    private Shape(Shape other) {
+        coords = new int[4][2];
+        pieceShape = other.pieceShape;
+        for (int i = 0; i < 4; ++i) {
+            System.arraycopy(other.coords[i], 0, coords[i], 0, 2);
+        }
+    }
+
     public void setShape(Tetromino shape) {
         int[][] shapeCoords = shape.getCoords();
         for (int i = 0; i < 4; ++i) {
@@ -68,6 +76,10 @@ public final class Shape {
             result.coords[i][1] = x(i);
         }
         return result;
+    }
+
+    public Shape copy() {
+        return new Shape(this);
     }
 
     public int minX() {

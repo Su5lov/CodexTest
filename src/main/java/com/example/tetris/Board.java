@@ -27,11 +27,16 @@ public final class Board extends JPanel implements ActionListener {
     private int curX = 0;
     private int curY = 0;
     private Shape curPiece;
+    private Shape nextPiece;
     private Tetromino[] board;
     private final JLabel statusBar;
+    private final NextPiecePanel nextPiecePanel;
+    private final ProceduralAudio audio;
 
-    public Board(JLabel statusBar) {
+    public Board(JLabel statusBar, NextPiecePanel nextPiecePanel, ProceduralAudio audio) {
         this.statusBar = statusBar;
+        this.nextPiecePanel = nextPiecePanel;
+        this.audio = audio;
         setFocusable(true);
         curPiece = new Shape();
         timer = new Timer(PERIOD_MS, this);
@@ -72,10 +77,18 @@ public final class Board extends JPanel implements ActionListener {
         isStarted = true;
         isFallingFinished = false;
         numLinesRemoved = 0;
+        isPaused = false;
         clearBoard();
+        curPiece.setShape(Tetromino.NO_SHAPE);
+
+        nextPiece = new Shape();
+        nextPiece.setRandomShape();
+        updatePreview();
 
         newPiece();
         timer.start();
+        audio.startMusic();
+        statusBar.setText(String.format("Счёт: %d", numLinesRemoved));
     }
 
     private void pause() {
@@ -87,9 +100,11 @@ public final class Board extends JPanel implements ActionListener {
         if (isPaused) {
             timer.stop();
             statusBar.setText("Пауза");
+            audio.pauseMusic();
         } else {
             timer.start();
             statusBar.setText(String.format("Счёт: %d", numLinesRemoved));
+            audio.resumeMusic();
         }
         repaint();
     }
@@ -149,6 +164,7 @@ public final class Board extends JPanel implements ActionListener {
             board[y * BOARD_WIDTH + x] = curPiece.getShape();
         }
 
+        audio.playLockSound();
         removeFullLines();
 
         if (!isFallingFinished) {
@@ -157,8 +173,15 @@ public final class Board extends JPanel implements ActionListener {
     }
 
     private void newPiece() {
-        curPiece = new Shape();
-        curPiece.setRandomShape();
+        if (nextPiece == null) {
+            nextPiece = new Shape();
+            nextPiece.setRandomShape();
+        }
+
+        curPiece = nextPiece;
+        nextPiece = new Shape();
+        nextPiece.setRandomShape();
+        updatePreview();
         curX = BOARD_WIDTH / 2 + curPiece.minX();
         curY = BOARD_HEIGHT - 1 + curPiece.minY();
 
@@ -167,6 +190,7 @@ public final class Board extends JPanel implements ActionListener {
             timer.stop();
             isStarted = false;
             statusBar.setText(String.format("Игра окончена. Счёт: %d", numLinesRemoved));
+            audio.stopMusic();
         }
     }
 
@@ -220,9 +244,16 @@ public final class Board extends JPanel implements ActionListener {
         if (numFullLines > 0) {
             numLinesRemoved += numFullLines;
             statusBar.setText(String.format("Счёт: %d", numLinesRemoved));
+            audio.playLineClearSound(numFullLines);
             isFallingFinished = true;
             curPiece.setShape(Tetromino.NO_SHAPE);
             repaint();
+        }
+    }
+
+    private void updatePreview() {
+        if (nextPiecePanel != null) {
+            nextPiecePanel.setPreview(nextPiece);
         }
     }
 
